@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+backend/storage/
+backend/inspectvision.db
+*.db
+node_modules/
+frontend/.next/
+frontend/out/
+.next/
+.env
+dist/

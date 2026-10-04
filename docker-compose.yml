@@ -1,0 +1,65 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: inspectvision-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/backend/storage/inspectvision.db
+      - MODEL_PATH=yolov8n.pt
+      - DEVICE=auto
+      - DEFAULT_CONF=0.45
+      - CRITICAL_CONF_THRESHOLD=0.85
+    volumes:
+      - backend-storage:/app/backend/storage
+      # mount custom YOLO weights (optional):
+      # - ./weights:/app/weights:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    # --- NVIDIA GPU (uncomment when CUDA host + nvidia-container-toolkit installed) ---
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws/inspect
+    container_name: inspectvision-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_WS_URL=ws://backend:8000/ws/inspect
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # --- Optional PostgreSQL (uncomment + set DATABASE_URL to use instead of SQLite) ---
+  # db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: inspect
+  #     POSTGRES_PASSWORD: inspect
+  #     POSTGRES_DB: inspectvision
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+volumes:
+  backend-storage:
+  # pgdata:
